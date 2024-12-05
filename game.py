@@ -1,6 +1,8 @@
 import pygame
 import sys
-from maze_generator import Maze  # Import from perlin branch
+from maze_generator import Maze 
+import config
+import menu
 
 WINDOW_SIZE = 800
 ROOM_SIZE = 8
@@ -14,10 +16,23 @@ class Player:
         self.x = 0
         self.y = 0
         self.discovered_rooms = set()
-        self.discover_room()
+        self.discovered_exits = set()
+        if config.SETTINGS['admin_mode']:
+            self.discover_all_rooms()
+        else:
+            self.discover_room()
+
+    def discover_all_rooms(self):
+        for x in range(self.maze.size):
+            for y in range(self.maze.size):
+                self.discovered_rooms.add((x, y))
+                if self.maze.rooms[x][y].is_exit:
+                    self.discovered_exits.add((x, y))
 
     def discover_room(self):
         self.discovered_rooms.add((self.x, self.y))
+        if self.maze.rooms[self.x][self.y].is_exit:
+            self.discovered_exits.add((self.x, self.y))
 
     def move(self, key):
         moves = {
@@ -69,49 +84,46 @@ def draw_game(screen, maze, player):
                 (room_x + ROOM_SIZE, room_y), 
                 (room_x + ROOM_SIZE, room_y + ROOM_SIZE), 1)
         
-        if room.is_exit:
+        if (x, y) in player.discovered_exits:
             pygame.draw.rect(screen, RED, 
                 (room_x + 2, room_y + 2, 
                  ROOM_SIZE - 4, ROOM_SIZE - 4))
     
-    # Draw player
     player_x = center_x - ROOM_SIZE//4
     player_y = center_y - ROOM_SIZE//4
     pygame.draw.rect(screen, WHITE, 
         (player_x, player_y, ROOM_SIZE//2, ROOM_SIZE//2))
 
-    # Draw coordinates
     font = pygame.font.Font(None, 36)
     pos_text = font.render(f"Position: ({player.x}, {player.y})", True, WHITE)
     screen.blit(pos_text, (10, 10))
 
+def run_game():
+   screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
+   clock = pygame.time.Clock()
+   maze = Maze(config.SETTINGS['maze_size'])
+   player = Player(maze)
+   
+   running = True
+   while running:
+       for event in pygame.event.get():
+           if event.type == pygame.QUIT:
+               return
+           elif event.type == pygame.KEYDOWN:
+               if event.key == pygame.K_ESCAPE:
+                   return
+               if event.key in [pygame.K_UP, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT]:
+                   player.move(event.key)
+                   if maze.rooms[player.x][player.y].is_exit:
+                       print("Congratulations!")
+                       return
+       
+       draw_game(screen, maze, player)
+       pygame.display.flip()
+       clock.tick(60)
+
 def main():
-    pygame.init()
-    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
-    pygame.display.set_caption("Maze Explorer")
-    clock = pygame.time.Clock()
-    
-    maze = Maze()
-    player = Player(maze)
-    
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_UP, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT]:
-                    player.move(event.key)
-                    if maze.rooms[player.x][player.y].is_exit:
-                        print("Congratulations! You found the exit!")
-                        running = False
-        
-        draw_game(screen, maze, player)
-        pygame.display.flip()
-        clock.tick(60)
-    
-    pygame.quit()
-    sys.exit()
+   menu.main()
 
 if __name__ == "__main__":
-    main()
+   main()
