@@ -11,6 +11,7 @@ class Room:
 class Maze:
     def __init__(self, size=100):
         self.size = size
+        self.noise = PerlinNoise(octaves=1, seed=random.randint(0, 1000))
         self.rooms = [[Room(x, y) for y in range(size)] for x in range(size)]
         self.generate_maze()
         self.set_exit()
@@ -65,4 +66,25 @@ class Maze:
                 y -= 1
 
     def set_exit(self):
-        self.rooms[self.size-1][self.size-1].is_exit = True
+        max_noise = float('-inf')
+        main_x = main_y = 0
+        for x in range(self.size//2, self.size):
+            for y in range(self.size//2, self.size):
+                noise_val = self.noise([x/self.size, y/self.size])
+                if noise_val > max_noise:
+                    max_noise = noise_val
+                    main_x = x
+                    main_y = y
+        self.rooms[main_x][main_y].is_exit = True
+        
+        num_extra_exits = random.randint(0, 5)
+        extra_exits = set()
+        
+        while len(extra_exits) < num_extra_exits:
+            x = random.randint(self.size//2, self.size-1)
+            y = random.randint(self.size//2, self.size-1)
+            if (x, y) != (main_x, main_y):
+                extra_exits.add((x, y))
+        
+        for x, y in extra_exits:
+            self.rooms[x][y].is_exit = True
