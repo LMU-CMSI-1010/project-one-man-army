@@ -1,4 +1,4 @@
-# Game settings and configurations
+# game settings and configurations
 SETTINGS = {
     'maze_size': 100,
     'admin_mode': False,
